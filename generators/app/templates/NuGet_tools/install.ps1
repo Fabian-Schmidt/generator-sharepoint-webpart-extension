@@ -9,12 +9,13 @@ if([string]::IsNullOrEmpty($url)) {
    Write-Error 'Missing url.'
 }
 
-if(-not [string]::IsNullOrEmpty($username) -and -not [string]::IsNullOrEmpty($password)) {
+$securePassword = $null;
+if((-not [string]::IsNullOrEmpty($username)) -and (-not [string]::IsNullOrEmpty($password))) {
    $securePassword = $password | ConvertTo-SecureString -AsPlainText -Force
 }
  
 $scriptLocation = Get-Location;
-Install-Module SharePointPnPPowerShellOnline -Scope CurrentUser -DisableNameChecking;
+Install-Module SharePointPnPPowerShellOnline -Scope CurrentUser;
 #Import-Module 'OfficeDevPnP.PowerShell.V16.Commands' -DisableNameChecking;
 
 # connect/authenticate to SharePoint Online and get ClientContext object.. 
@@ -35,6 +36,17 @@ $extensionFolder = '{ExtensionFolder}';
 
 #### Create Folders ####################
 Write-Host 'Create Folders'
+function AddSPOFolder {
+	param (
+         $Name
+        ,$Folder
+    )
+	process {
+		$clientContext = Get-SPOContext;
+		$result = $clientContext.Web.GetFolderByServerRelativeUrl($clientContext.Web.Url + $Folder).Folders.Add($Name);
+		$clientContext.ExecuteQuery();
+	}
+}
 $parentFolder = '';
 $extensionFolder -split '/' | ForEach {
     $folderName = $_;
@@ -42,7 +54,7 @@ $extensionFolder -split '/' | ForEach {
         if ($parentFolder.Length -eq 0) {
             #Do not create root folder.
         } else {
-            Add-SPOFolder -Name $folderName -Folder $parentFolder
+            AddSPOFolder -Name $folderName -Folder $parentFolder
         }
         $parentFolder += '/' + $folderName;
     }
@@ -56,26 +68,26 @@ function UploadFiles{
         ,$folder
     )
     process {
-        if ($item.Name -contains '.dwp' -or $item.Name -contains '.js.map') {
+        if ($item.Name -match '.dwp' -or $item.Name -match '.js.map') {
             #Do nothing. These files are not uploaded
         } else { 
-            if ($item -is [System.IO.DirectoryInfo]){
+            If ($item -is [System.IO.DirectoryInfo]){
                 Write-Host "$folder/$item/"
-                Add-SPOFolder -Name $item.Name -Folder $folder
+                AddSPOFolder -Name $item.Name -Folder $folder
                 $subFolder = $folder + '/' + $item.Name;
                 Get-ChildItem $item.FullName | ForEach {
                     $item2 = $_;
                     UploadFiles -item $item2 -folder $subFolder    
                 }
-            } else if ($item.Name -contains '.html' ) {
+            } ElseIf ($item.Name -match '.html' ) {
                 Write-Host "$folder/$item";
                 (Get-Content $item.FullName).replace('{SiteCollectionUrl}', $SiteCollectionUrl) | Set-Content $item.FullName
                 $fileToUpload = $item.FullName;
-                Add-SPOFile -Path $fileToUpload -Folder $folder
-            } else {
+                $result = Add-SPOFile -Path $fileToUpload -Folder $folder
+            } Else {
                 Write-Host "$folder/$item";
                 $fileToUpload = $item.FullName;
-                Add-SPOFile -Path $fileToUpload -Folder $folder
+                $result = Add-SPOFile -Path $fileToUpload -Folder $folder
             }
         }
     }
@@ -90,12 +102,12 @@ $clientContext.ExecuteQuery();
 Write-Host 'Upload web part Files'
 Get-ChildItem ($scriptLocation.ToString() + '\..\content') | ForEach {
     $item = $_;
-    if ($item.Name -contains '.dwp') {
+    if ($item.Name -match '.dwp') {
         $folder = '_catalogs/wp';
         Write-Host "$folder/$item";
         (Get-Content $item.FullName).replace('{SiteCollectionUrl}', $SiteCollectionUrl) | Set-Content $item.FullName
         $fileToUpload = $item.FullName;
-        Add-SPOFile -Path $fileToUpload -Folder $folder
+        $result = Add-SPOFile -Path $fileToUpload -Folder $folder
         $fullFileUrl = $clientContext.Web.ServerRelativeUrl + $folder + '/' + $item.Name;
         $file = $clientContext.Web.GetFileByServerRelativeUrl($fullFileUrl);
         $item = $file.ListItemAllFields
