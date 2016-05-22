@@ -39,7 +39,7 @@ module COMPANY.<%= name %> {
         }
         PropertyUIOverrideActive(isActive: boolean) {
             if (isActive) {
-                var contentSettings = { category: 'Advanced', optionalName: 'Bar', optionalToolTip: 'Tooltip', outputSeparator: true };
+                var contentSettings = { category: 'Advanced', optionalName: 'Demo Settings', optionalToolTip: 'Tooltip', outputSeparator: true };
                 this.propertyUIOverride.hideProperty('HelpUrl', 'Advanced');
                 var content = this.propertyUIOverride.createNewContentAtTop(contentSettings);
                 var select = $(content.html('<select id="contosoSelectSPList"></select>')[0].children[0]);
@@ -51,7 +51,7 @@ module COMPANY.<%= name %> {
                 });
                 var html: string[] = [];
                 html.push("<option>Foo</option>");
-                html.push("<option>FooBar</option>");
+                html.push("<option>Foo Bar</option>");
                 html.push("<option>Bar</option>");
                 html.push("<option>Office365</option>");
                 select[0].innerHTML = html.join("");
