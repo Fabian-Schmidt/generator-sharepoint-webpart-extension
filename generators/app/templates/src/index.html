@@ -1,0 +1,51 @@
+List of project members:
+<div style='display: none'>
+(function () {
+    function loadjscssfile(filename, filetype, callback) {
+        var url = _spPageContextInfo.siteServerRelativeUrl + '{ExtensionFolder}/' + filename + '?rev={Revision}';
+        var fileref;
+        if (filetype == "js") {
+            fileref = document.createElement('script');
+            fileref.setAttribute("type", "text/javascript");
+            fileref.setAttribute("src", url);
+            if (callback) {
+                var done = false;
+                fileref.onload = fileref.onreadystatechange = function () {
+                    if (!done) {
+                        if (!this.readyState || this.readyState == "loaded" || this.readyState == "complete") {
+                            done = true;
+                            callback();
+                        }
+                    }
+                }
+            }
+        }
+        else if (filetype == "css") {
+            fileref = document.createElement("link");
+            fileref.setAttribute("rel", "stylesheet");
+            fileref.setAttribute("type", "text/css");
+            fileref.setAttribute("href", url);
+        };
+        if (fileref) {
+            document.getElementsByTagName("head")[0].appendChild(fileref);
+		};
+    }
+    var webPartDOMObject = arguments[0].parentElement;
+    webPartDOMObject.removeChild(arguments[0]);
+    if (!webPartDOMObject.parentElement.Inited) {
+        webPartDOMObject.parentElement.Inited = true;
+        var vendorLoaded = false;
+        var appLoaded = false;
+        var startMyCode = function () {
+            if (!webPartDOMObject.parentElement.Extension) {
+            if (vendorLoaded && appLoaded) {
+                webPartDOMObject.parentElement.Extension = new COMPANY.ExtensionName.ExtensionName(webPartDOMObject);
+            }
+            }
+        };
+        loadjscssfile("vendor.min.js", "js", function () { vendorLoaded = true; startMyCode(); });
+        loadjscssfile("app.min.js", "js", function () { appLoaded = true; startMyCode(); }); 
+    }
+})(arguments[0].srcElement);
+</div>
+<img src="/_layouts/images/blank.gif" style="display: none;" onLoad='eval(this.previousElementSibling.innerText);'/>

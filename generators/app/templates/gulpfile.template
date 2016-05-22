@@ -1,0 +1,312 @@
+var gulp = require('gulp');
+var gutil = require('gulp-util');
+var gulpif = require('gulp-if');
+var spSync = require('gulp-sharepoint-sync');
+var merge = require('merge-stream');
+var runSequence = require('run-sequence');
+var del = require('del');
+var mainBowerFiles = require('main-bower-files');
+var concat = require('gulp-concat');
+var sourcemaps = require('gulp-sourcemaps');
+var cssmin = require('gulp-cssmin');
+var uglify = require('gulp-uglify');
+var filter = require('gulp-filter');
+var order = require('gulp-order');
+var htmlmin = require('gulp-htmlmin');
+var replace = require('gulp-replace');
+var livereload = require('gulp-livereload');
+var inquirer = require('inquirer');
+var fs = require('fs');
+var assign = require('object-assign');
+var ts = require('gulp-typescript');
+var tsProject = ts.createProject('tsconfig.json', {
+    noImplicitAny: true,
+    //out: 'output.js',
+    sortOutput: true,
+});
+
+var paths = {
+    source: "./src/",
+    source_assets: "./src/" + "assets/**/*",
+    source_dwp: "./src/" + "*.dwp",
+    source_html: "./src/" + "**/*.html",
+    source_css: "./src/" + "css/**/*.css",
+    source_ts: "./src/" + "js/**/*.ts",
+    source_js: "./src/" + "js/**/*.js",
+
+    release: "./release/",
+    release_assets: "./release/" + "assets/",
+    release_dwp: "./release/" + "",
+    release_html: "./release/" + "",
+    release_css: "./release/" + "app.min.css",
+    release_js: "./release/" + "app.min.js",
+    release_jsmap: "./release/" + "app.min.js.map",
+
+    release_bower_css: "./release/" + "vendor.min.css",
+    release_bower_js: "./release/" + "vendor.min.js",
+    release_bower_jsmap: "./release/" + "vendor.min.js.map",
+
+    source_nuget_lib: './NuGet_lib/**/*',
+    source_nuget_tools: './NuGet_tools/**/*',
+
+    nuget_lib: './lib/',
+    nuget_tools: './tools/'
+};
+
+var spSync_devSettings = {
+    site: process.env.SPSYNC_SITECOLLECTIONURL,
+    authenticationMethod: ((process.env.SPSYNC_AUTHENTICATIONMETHOD) ? process.env.SPSYNC_AUTHENTICATIONMETHOD : 'ADAL'),
+    auth_username: undefined,
+    auth_clientId: process.env.SPSYNC_CLIENTID,
+    auth_clientSecret: gutil.env.SPSYNC_CLIENTSECRET
+};
+try {
+    spSync_devSettings = assign(spSync_devSettings, require('../dev.json'));
+} catch (err) {
+    gutil.log("No ../dev.json file found.")
+}
+var packageSettings = require('./package.json');
+var spSync_AppFolder = '/_catalogs/theme/company/' + packageSettings.name;
+var spSync_Connection = null;
+gulp.task('authenticate', function (done) {
+    if (spSync_devSettings.authenticationMethod === 'ADAL') {
+        inquirer.prompt({
+            type: 'password',
+            name: 'pass',
+            message: 'Please enter password for user "' + spSync_username + '":'
+        }, function (answers) {
+            spSync_Connection = spSync.create({
+                site: spSync_devSettings.site,
+                authenticationMethod: spSync_devSettings.authenticationMethod,
+                auth_username: spSync_devSettings.auth_username,
+                auth_password: answers.pass,
+                parallel: 5,
+                log: gutil.log,
+                logLevel: 2
+            });
+            done();
+        });
+    } else {
+        spSync_Connection = spSync.create({
+            site: spSync_devSettings.site,
+            authenticationMethod: spSync_devSettings.authenticationMethod,
+            auth_clientId: spSync_devSettings.auth_clientId,
+            auth_clientSecret: spSync_devSettings.auth_clientSecret,
+            parallel: 5,
+            log: gutil.log,
+            logLevel: 2
+        });
+        done();
+    }
+});
+
+var spSync_WebPartFolder = '/_catalogs/wp';
+var ErrorInJS = false;
+var ErrorInHTML = false;
+var EnableLivereload = false;
+var LivereloadPort = '35729';
+
+
+gulp.task('clean:release', function () {
+    return del([paths.release]);
+});
+gulp.task('clean:NuGet_lib', function () {
+    return del([paths.nuget_lib]);
+});
+gulp.task('clean:NuGet_tools', function () {
+    return del([paths.nuget_tools]);
+});
+gulp.task('clean', ['clean:release', 'clean:NuGet_lib', 'clean:NuGet_tools']);
+
+
+gulp.task('bower:Js', function () {
+    return gulp.src(mainBowerFiles())
+        .pipe(filter('**/*.js'))
+        .pipe(sourcemaps.init())
+        .pipe(concat(paths.release_bower_js))
+        .pipe(uglify({ 'preserveComments': 'license' }))
+        .pipe(sourcemaps.write('.'))
+        .pipe(gulp.dest('.'))
+});
+gulp.task('bower:Css', function () {
+    return gulp.src(mainBowerFiles())
+        .pipe(filter('**/*.css'))
+        .pipe(order([
+            'normalize.css',
+            '*'
+        ]))
+        .pipe(concat(paths.release_bower_css))
+        .pipe(uglify({ 'preserveComments': 'license' }))
+        .pipe(gulp.dest('.'));
+});
+gulp.task('bower', ['bower:Js', 'bower:Css']);
+
+
+gulp.task('app:Assets', function () {
+    return gulp.src(paths.source_assets)
+        .pipe(gulp.dest(paths.release_assets));
+});
+gulp.task('app:Dwp', function () {
+    return gulp.src(paths.source_dwp)
+        .pipe(replace(/{ExtensionFolder}/g, spSync_AppFolder))
+        .pipe(gulp.dest(paths.release_dwp));
+});
+gulp.task('app:Html', function () {
+    ErrorInHTML = false;
+    return gulp.src(paths.source_html)
+        .pipe(replace(/{Revision}/g, new Date().getTime()))
+        .pipe(replace(/{ExtensionFolder}/g, spSync_AppFolder))
+        .pipe(htmlmin({
+            collapseWhitespace: true,
+            conservativeCollapse: true,
+            collapseBooleanAttributes: true,
+            removeCommentsFromCDATA: true,
+            removeOptionalTags: true
+        }))
+        .on('error', function (error) {
+            ErrorInHTML = true;
+            gutil.log(error.toString());
+            this.emit('end');
+        })
+        .pipe(gulpif(!ErrorInHTML, gulp.dest(paths.release_html)))
+});
+gulp.task('app:Js', function () {
+    ErrorInJS = false;
+    var tsResult = gulp.src(paths.source_ts)
+        .pipe(sourcemaps.init()) // This means sourcemaps will be generated 
+        .pipe(ts(tsProject));
+    var jsResults = gulp.src(paths.source_js)
+        .pipe(sourcemaps.init()) // This means sourcemaps will be generated 
+    return merge(tsResult.js, jsResults)
+        //gulpif(isProductionBuild
+        .pipe(uglify())
+        .on('error', function (error) {
+            ErrorInJS = true;
+            gutil.log(error.toString());
+            this.emit('end');
+        })
+        .pipe(gulpif(!ErrorInJS, concat(paths.release_js)))
+        //.pipe(gulpif(!ErrorInJS, rev()))
+        .pipe(gulpif(!ErrorInJS, sourcemaps.write('.')))
+        .pipe(gulpif(!ErrorInJS, gulp.dest('.')));
+});
+gulp.task('app:Css', function () {
+    return gulp.src(paths.source_css)
+        .pipe(concat(paths.release_css))
+        .pipe(uglify())
+        .pipe(gulp.dest('.'));
+});
+gulp.task('app:NuGet_lib', function () {
+    return gulp.src(paths.source_nuget_lib)
+        .pipe(gulp.dest(paths.nuget_lib));
+});
+gulp.task('app:NuGet_tools', function () {
+    return gulp.src(paths.source_nuget_tools)
+        .pipe(replace(/{ExtensionFolder}/g, spSync_AppFolder))
+        .pipe(gulp.dest(paths.nuget_tools));
+});
+gulp.task('app', ['app:Assets', 'app:Dwp', 'app:Html', 'app:Js', 'app:Css', 'app:NuGet_lib', 'app:NuGet_tools']);
+
+
+gulp.task('upload:Assets', function () {
+    return gulp.src(paths.release_assets + '*')
+        .pipe(spSync_Connection.differentSize(spSync_AppFolder + '/assets'))
+        .pipe(gulpif(!ErrorInHTML, spSync_Connection.dest(spSync_AppFolder + '/assets')))
+        .pipe(livereload());
+});
+gulp.task('upload:Dwp', function () {
+    return gulp.src(paths.release_dwp + '*.dwp')
+        .pipe(replace(/{SiteCollectionUrl}/g, spSync_SiteCollectionUrl.replace(/[//]$/, '')))
+        .pipe(spSync_Connection.differentSize(spSync_WebPartFolder))
+        .pipe(gulpif(!ErrorInHTML, spSync_Connection.dest(spSync_WebPartFolder)))
+        .pipe(livereload());
+});
+gulp.task('upload:Html', function () {
+    return gulp.src(paths.release_html + '*.html')
+        .pipe(replace(/{SiteCollectionUrl}/g, spSync_SiteCollectionUrl.replace(/[//]$/, '')))
+        .pipe(gulpif(EnableLivereload, replace(/rev=/g, new Date().getTime())))
+        .pipe(gulpif(EnableLivereload, replace(/$/, '<img src="/_layouts/images/blank.gif" style="display: none;" onLoad=\'(function(e,a) {e.parentElement.removeChild(e);var s=document.createElement("script");s.setAttribute("src", a);document.head.appendChild(s);})(arguments[0].srcElement, "https://localhost:' + LivereloadPort + '/livereload.js?snipver=1");\'>')))
+        //.pipe(spSync_Connection.differentSize(spSync_AppFolder))
+        .pipe(gulpif(!ErrorInHTML, spSync_Connection.dest(spSync_AppFolder)))
+        .pipe(livereload());
+});
+gulp.task('upload:Js', function () {
+    return gulp.src([paths.release_js, paths.release_jsmap])
+        //.pipe(spSync_Connection.differentSize(spSync_AppFolder))
+        .pipe(gulpif(!ErrorInJS, spSync_Connection.dest(spSync_AppFolder)))
+        .pipe(livereload());
+});
+gulp.task('upload:Css', function () {
+    return gulp.src(paths.release_css)
+        //.pipe(spSync_Connection.differentSize(spSync_AppFolder))
+        .pipe(spSync_Connection.dest(spSync_AppFolder))
+        .pipe(livereload());
+});
+gulp.task('upload:BowerJs', function () {
+    return gulp.src([paths.release_bower_js, paths.release_bower_jsmap])
+        .pipe(spSync_Connection.differentSize(spSync_AppFolder))
+        .pipe(spSync_Connection.dest(spSync_AppFolder))
+        .pipe(livereload());
+});
+gulp.task('upload:BowerCss', function () {
+    return gulp.src([paths.release_bower_css])
+        .pipe(spSync_Connection.differentSize(spSync_AppFolder))
+        .pipe(spSync_Connection.dest(spSync_AppFolder))
+        .pipe(livereload());
+});
+gulp.task('upload', function (callback) {
+    runSequence('build',
+        'authenticate',
+        ['upload:Assets', 'upload:Dwp', 'upload:Html', 'upload:Js', 'upload:Css', 'upload:BowerJs', 'upload:BowerCss'],
+        callback);
+});
+gulp.task('uploadOnly', function (callback) {
+    runSequence(
+        'authenticate',
+        ['upload:Assets', 'upload:Dwp', 'upload:Html', 'upload:Js', 'upload:Css', 'upload:BowerJs', 'upload:BowerCss'],
+        callback);
+});
+
+
+gulp.task('livereload', function () {
+    EnableLivereload = true;
+    livereload.listen({
+        pfx: fs.readFileSync('../dev.pfx'),
+        passphrase: 'test'
+    });
+    LivereloadPort = livereload.server.port;
+});
+
+
+gulp.task('watch', ['livereload', 'upload'], function () {
+    gulp.watch(paths.source_dwp, function () {
+        runSequence('app:Assets',
+            'upload:Assets');
+    });
+    gulp.watch(paths.source_dwp, function () {
+        runSequence('app:Dwp',
+            'upload:Dwp');
+    });
+    gulp.watch(paths.source_html, function () {
+        runSequence('app:Html',
+            'upload:Html');
+    });
+    gulp.watch([paths.source_js, paths.source_ts], function () {
+        runSequence('app:Js',
+            'upload:Js');
+    });
+    gulp.watch(paths.source_css, function () {
+        runSequence('app:Css',
+            'upload:Css');
+    });
+});
+
+
+gulp.task('build', function (callback) {
+    runSequence('clean',
+        ['bower', 'app'],
+        callback);
+});
+
+
+gulp.task('default', ['build']);
