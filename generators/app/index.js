@@ -78,5 +78,6 @@ module.exports = yeoman.Base.extend({
 
   install: function () {
     this.installDependencies({ npm: true, bower: true });
+	this.spawnCommand('typings', ['install']);
   }
 });
