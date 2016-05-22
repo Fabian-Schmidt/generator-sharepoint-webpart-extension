@@ -2,9 +2,9 @@
   "name": "sharepoint-apppartpropertyuioverride",
   "version": false,
   "dependencies": {},
-  "ambientDependencies": {
-    "jquery": "registry:dt/jquery#1.10.0+20160303223636",
-    "microsoft.ajax": "registry:dt/microsoft.ajax#0.0.0+20150720163728",
-    "sharepoint": "registry:dt/sharepoint#0.0.0+20160214164040"
+  "globalDependencies": {
+    "jquery": "registry:dt/jquery#1.10.0+20160417213236",
+    "microsoft.ajax": "registry:dt/microsoft.ajax#0.0.0+20160317120654",
+    "sharepoint": "registry:dt/sharepoint#0.0.0+20160317120654"
   }
 }

@@ -216,14 +216,14 @@ gulp.task('upload:Assets', function () {
 });
 gulp.task('upload:Dwp', function () {
     return gulp.src(paths.release_dwp + '*.dwp')
-        .pipe(replace(/{SiteCollectionUrl}/g, spSync_SiteCollectionUrl.replace(/[//]$/, '')))
+        .pipe(replace(/{SiteCollectionUrl}/g, spSync_devSettings.site.replace(/[//]$/, '')))
         .pipe(spSync_Connection.differentSize(spSync_WebPartFolder))
         .pipe(gulpif(!ErrorInHTML, spSync_Connection.dest(spSync_WebPartFolder)))
         .pipe(livereload());
 });
 gulp.task('upload:Html', function () {
     return gulp.src(paths.release_html + '*.html')
-        .pipe(replace(/{SiteCollectionUrl}/g, spSync_SiteCollectionUrl.replace(/[//]$/, '')))
+        .pipe(replace(/{SiteCollectionUrl}/g, spSync_devSettings.site.replace(/[//]$/, '')))
         .pipe(gulpif(EnableLivereload, replace(/rev=/g, new Date().getTime())))
         .pipe(gulpif(EnableLivereload, replace(/$/, '<img src="/_layouts/images/blank.gif" style="display: none;" onLoad=\'(function(e,a) {e.parentElement.removeChild(e);var s=document.createElement("script");s.setAttribute("src", a);document.head.appendChild(s);})(arguments[0].srcElement, "https://localhost:' + LivereloadPort + '/livereload.js?snipver=1");\'>')))
         //.pipe(spSync_Connection.differentSize(spSync_AppFolder))
