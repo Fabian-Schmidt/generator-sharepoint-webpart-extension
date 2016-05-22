@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WebPart xmlns="http://schemas.microsoft.com/WebPart/v2">
-    <Assembly>Microsoft.SharePoint, Version=16.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c</Assembly>
+    <Assembly>Microsoft.SharePoint, Version=14.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c</Assembly>
     <TypeName>Microsoft.SharePoint.WebPartPages.ContentEditorWebPart</TypeName>
-    <Title>Project Team</Title>
-    <Description>Show Project Team in Project workspace.</Description>
+    <Title><%= name %></Title>
+    <Description><%= description %></Description>
     <FrameType>None</FrameType>
     <AllowRemove>false</AllowRemove>
     <AllowZoneChange>false</AllowZoneChange>

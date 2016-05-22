@@ -111,7 +111,7 @@ Get-ChildItem ($scriptLocation.ToString() + '\..\content') | ForEach {
         $fullFileUrl = $clientContext.Web.ServerRelativeUrl + $folder + '/' + $item.Name;
         $file = $clientContext.Web.GetFileByServerRelativeUrl($fullFileUrl);
         $item = $file.ListItemAllFields
-        $item['Group'] = 'IPMO';
+        $item['Group'] = 'Sensei';
         $item.Update();
     }
 }

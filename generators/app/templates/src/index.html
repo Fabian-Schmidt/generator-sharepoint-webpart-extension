@@ -1,4 +1,3 @@
-List of project members:
 <div style='display: none'>
 (function () {
     function loadjscssfile(filename, filetype, callback) {
@@ -39,7 +38,7 @@ List of project members:
         var startMyCode = function () {
             if (!webPartDOMObject.parentElement.Extension) {
             if (vendorLoaded && appLoaded) {
-                webPartDOMObject.parentElement.Extension = new COMPANY.ExtensionName.ExtensionName(webPartDOMObject);
+                webPartDOMObject.parentElement.Extension = new COMPANY.<%= name %>.<%= name %>(webPartDOMObject);
             }
             }
         };
