@@ -38,6 +38,7 @@ module COMPANY.<%= name %> {
             this.Init();
         }
         PropertyUIOverrideActive(isActive: boolean) {
+			var that = this;
             if (isActive) {
                 var contentSettings = { category: 'Advanced', optionalName: 'Demo Settings', optionalToolTip: 'Tooltip', outputSeparator: true };
                 this.propertyUIOverride.hideProperty('HelpUrl', 'Advanced');
@@ -47,7 +48,9 @@ module COMPANY.<%= name %> {
                     //console.log('change');
                     //var value = (<HTMLSelectElement><any>this).value;
                     var settings: ISetting = { l: (<HTMLSelectElement>e.currentTarget).value, v: true };
-                    this.propertyUIOverride.setValue('HelpUrl', window.btoa(JSON.stringify(settings)), 'Advanced');
+                    that.propertyUIOverride.setValue('HelpUrl', window.btoa(JSON.stringify(settings)), 'Advanced');
+					that.settings = settings;
+					that.Init.apply(that);
                 });
                 var html: string[] = [];
                 html.push("<option>Foo</option>");
@@ -63,7 +66,7 @@ module COMPANY.<%= name %> {
         Init() {
             var that = this;
 			
-			that.output.innerText += 'Web Part Loaded! Settings: ' + this.settings.l;
+			that.output.innerText = 'Web Part Loaded! Settings: ' + this.settings.l;
         }
     }
 }
