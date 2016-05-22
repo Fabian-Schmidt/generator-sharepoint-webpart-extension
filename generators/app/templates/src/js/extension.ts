@@ -59,9 +59,7 @@ module COMPANY.<%= name %> {
                 select.val(this.settings.l);
             }
         }
-        memberGroupsPromise: JQueryPromise<ISharePointSecurityGroupMember[]>;
-        ownerGroupsPromise: JQueryPromise<ISharePointSecurityGroupMember[]>;
-
+		
         Init() {
             var that = this;
 			
