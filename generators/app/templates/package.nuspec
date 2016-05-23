@@ -2,6 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id><%= name %></id>
+	<title><%= displayname %></title>
     <version>0.0.0</version><!--See package.json file for version.-->
     <authors><%= authorName %></authors>
 	  <description><%= description %></description>

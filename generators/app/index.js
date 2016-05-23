@@ -19,8 +19,22 @@ module.exports = yeoman.Base.extend({
 
     var prompts = [{
       name: 'name',
-      message: 'Your SharePoint Web Part extension name',
+      message: 'Your SharePoint Web Part extension package name',
       default: makeGeneratorName(path.basename(process.cwd())),
+      validate: function (str) {
+        return str.length > 0;
+      }
+    },{
+      name: 'classname',
+      message: 'Your SharePoint Web Part extension JavaScript class name',
+      default: path.basename(process.cwd()),
+      validate: function (str) {
+        return str.length > 0;
+      }
+    }, {
+      name: 'displayname',
+      message: 'Your SharePoint Web Part extension display name',
+      default: path.basename(process.cwd()),
       validate: function (str) {
         return str.length > 0;
       }
@@ -48,7 +62,7 @@ module.exports = yeoman.Base.extend({
 
   writing: function () {
 	// Root Folder
-    this.fs.copy(this.templatePath('.gitignore'), this.destinationPath('.gitignore'));
+    this.fs.copy(this.templatePath('gitignore'), this.destinationPath('.gitignore'));
     this.fs.copyTpl(this.templatePath('bower.json'), this.destinationPath('bower.json'), this.props);
 	this.fs.copy(this.templatePath('gulpfile.template'), this.destinationPath('gulpfile.js'));
     this.fs.copyTpl(this.templatePath('package.json'), this.destinationPath('package.json'), this.props);

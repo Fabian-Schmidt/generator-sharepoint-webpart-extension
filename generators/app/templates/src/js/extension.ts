@@ -1,6 +1,6 @@
 /// <reference path="extension.d.ts" />
 
-module COMPANY.<%= name %> {
+module COMPANY.<%= classname %> {
 
     export interface ISetting {
         /**
@@ -13,7 +13,7 @@ module COMPANY.<%= name %> {
         l?: string;
     }
 
-    export class <%= name %> {
+    export class <%= classname %> {
         propertyUIOverride: AppPartPropertyUIOverride.AppPartPropertyUIOverride = null;
         output: HTMLDivElement;
         webPartId: string;

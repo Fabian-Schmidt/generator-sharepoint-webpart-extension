@@ -38,7 +38,7 @@
         var startMyCode = function () {
             if (!webPartDOMObject.parentElement.Extension) {
             if (vendorLoaded && appLoaded) {
-                webPartDOMObject.parentElement.Extension = new COMPANY.<%= name %>.<%= name %>(webPartDOMObject);
+                webPartDOMObject.parentElement.Extension = new COMPANY.<%= classname %>.<%= classname %>(webPartDOMObject);
             }
             }
         };

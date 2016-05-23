@@ -2,7 +2,7 @@
 <WebPart xmlns="http://schemas.microsoft.com/WebPart/v2">
     <Assembly>Microsoft.SharePoint, Version=14.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c</Assembly>
     <TypeName>Microsoft.SharePoint.WebPartPages.ContentEditorWebPart</TypeName>
-    <Title><%= name %></Title>
+    <Title><%= displayname %></Title>
     <Description><%= description %></Description>
     <FrameType>None</FrameType>
     <AllowRemove>false</AllowRemove>
