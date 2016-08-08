@@ -2,7 +2,9 @@ param(
 	 [Parameter(Mandatory=$True)][string]$url
 	,[Parameter(Mandatory=$False)][string]$username
 	,[Parameter(Mandatory=$False)][string]$password
-    ,[Parameter(Mandatory=$False)][System.Management.Automation.PSCredential]$credential)
+    ,[Parameter(Mandatory=$False)][System.Management.Automation.PSCredential]$credential
+	,[Parameter(Mandatory=$False)][string]$clientId
+	,[Parameter(Mandatory=$False)][string]$clientSecret)
 $ErrorActionPreference = 'Stop';
 
 if([string]::IsNullOrEmpty($url)) {
@@ -24,6 +26,8 @@ if ($securePassword) {
 }
 if ($credential) {
 	Connect-SPOnline -Url $url -Credentials $credential
+} elseif ($clientId -and $clientSecret) {
+	Connect-SPOnline -Url $url -AppId $clientId -AppSecret $clientSecret
 } else {
 	Connect-SPOnline -Url $url
 }
@@ -60,7 +64,7 @@ $extensionFolder -split '/' | ForEach {
     }
 }
 
-#### Upload Content Files ####################
+#### Upload Release Files ####################
 Write-Host 'Upload Files'
 function UploadFiles{
     param (
@@ -92,7 +96,7 @@ function UploadFiles{
         }
     }
 }
-Get-ChildItem ($scriptLocation.ToString() + '\..\content') | ForEach {
+Get-ChildItem ($scriptLocation.ToString() + '\..\release') | ForEach {
     $item = $_;
     UploadFiles -item $item -folder $extensionFolder
 }
@@ -100,7 +104,7 @@ $clientContext.ExecuteQuery();
 
 #### Upload web part Files ####################
 Write-Host 'Upload web part Files'
-Get-ChildItem ($scriptLocation.ToString() + '\..\content') | ForEach {
+Get-ChildItem ($scriptLocation.ToString() + '\..\release') | ForEach {
     $item = $_;
     if ($item.Name -match '.dwp') {
         $folder = '_catalogs/wp';

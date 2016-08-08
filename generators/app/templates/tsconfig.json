@@ -1,1 +1,15 @@
-{}
+{
+    "compilerOptions": {
+        "outDir": "./release/",
+        "sourceMap": true,
+        "noImplicitAny": true,
+        "experimentalDecorators": true,
+        "module": "commonjs",
+        "target": "es5",//UglifyJsPlugin does not support es6.
+        "jsx": "react"
+    },
+    "files":[
+        "./typings/index.d.ts",
+        "./src/js/index.tsx"
+    ]
+}

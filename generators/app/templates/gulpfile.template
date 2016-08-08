@@ -1,29 +1,18 @@
 var gulp = require('gulp');
 var gutil = require('gulp-util');
+var webpack = require("webpack");
+var WebpackDevServer = require("webpack-dev-server");
+var webpackConfig = require("./webpack.config.js");
 var gulpif = require('gulp-if');
 var spSync = require('gulp-sharepoint-sync');
-var merge = require('merge-stream');
 var runSequence = require('run-sequence');
 var del = require('del');
-var mainBowerFiles = require('main-bower-files');
-var concat = require('gulp-concat');
-var sourcemaps = require('gulp-sourcemaps');
-var cssmin = require('gulp-cssmin');
-var uglify = require('gulp-uglify');
-var filter = require('gulp-filter');
-var order = require('gulp-order');
 var htmlmin = require('gulp-htmlmin');
 var replace = require('gulp-replace');
-var livereload = require('gulp-livereload');
 var inquirer = require('inquirer');
-var fs = require('fs');
+var fs = require("fs");
+var path = require("path");
 var assign = require('object-assign');
-var ts = require('gulp-typescript');
-var tsProject = ts.createProject('tsconfig.json', {
-    noImplicitAny: true,
-    //out: 'output.js',
-    sortOutput: true,
-});
 
 var paths = {
     source: "./src/",
@@ -41,10 +30,6 @@ var paths = {
     release_css: "./release/" + "app.min.css",
     release_js: "./release/" + "app.min.js",
     release_jsmap: "./release/" + "app.min.js.map",
-
-    release_bower_css: "./release/" + "vendor.min.css",
-    release_bower_js: "./release/" + "vendor.min.js",
-    release_bower_jsmap: "./release/" + "vendor.min.js.map",
 
     source_nuget_lib: './NuGet_lib/**/*',
     source_nuget_tools: './NuGet_tools/**/*',
@@ -101,11 +86,9 @@ gulp.task('authenticate', function (done) {
 });
 
 var spSync_WebPartFolder = '/_catalogs/wp';
-var ErrorInJS = false;
+var WebPackDevServerActive = false;/* Updated by script on watch command. */
+var WebPackDevServerPort = 8080;
 var ErrorInHTML = false;
-var EnableLivereload = false;
-var LivereloadPort = '35729';
-
 
 gulp.task('clean:release', function () {
     return del([paths.release]);
@@ -117,30 +100,6 @@ gulp.task('clean:NuGet_tools', function () {
     return del([paths.nuget_tools]);
 });
 gulp.task('clean', ['clean:release', 'clean:NuGet_lib', 'clean:NuGet_tools']);
-
-
-gulp.task('bower:Js', function () {
-    return gulp.src(mainBowerFiles())
-        .pipe(filter('**/*.js'))
-        .pipe(sourcemaps.init())
-        .pipe(concat(paths.release_bower_js))
-        .pipe(uglify({ 'preserveComments': 'license' }))
-        .pipe(sourcemaps.write('.'))
-        .pipe(gulp.dest('.'))
-});
-gulp.task('bower:Css', function () {
-    return gulp.src(mainBowerFiles())
-        .pipe(filter('**/*.css'))
-        .pipe(order([
-            'normalize.css',
-            '*'
-        ]))
-        .pipe(concat(paths.release_bower_css))
-        .pipe(uglify({ 'preserveComments': 'license' }))
-        .pipe(gulp.dest('.'));
-});
-gulp.task('bower', ['bower:Js', 'bower:Css']);
-
 
 gulp.task('app:Assets', function () {
     return gulp.src(paths.source_assets)
@@ -170,32 +129,6 @@ gulp.task('app:Html', function () {
         })
         .pipe(gulpif(!ErrorInHTML, gulp.dest(paths.release_html)))
 });
-gulp.task('app:Js', function () {
-    ErrorInJS = false;
-    var tsResult = gulp.src(paths.source_ts)
-        .pipe(sourcemaps.init()) // This means sourcemaps will be generated 
-        .pipe(ts(tsProject));
-    var jsResults = gulp.src(paths.source_js)
-        .pipe(sourcemaps.init()) // This means sourcemaps will be generated 
-    return merge(tsResult.js, jsResults)
-        //gulpif(isProductionBuild
-        .pipe(uglify())
-        .on('error', function (error) {
-            ErrorInJS = true;
-            gutil.log(error.toString());
-            this.emit('end');
-        })
-        .pipe(gulpif(!ErrorInJS, concat(paths.release_js)))
-        //.pipe(gulpif(!ErrorInJS, rev()))
-        .pipe(gulpif(!ErrorInJS, sourcemaps.write('.')))
-        .pipe(gulpif(!ErrorInJS, gulp.dest('.')));
-});
-gulp.task('app:Css', function () {
-    return gulp.src(paths.source_css)
-        .pipe(concat(paths.release_css))
-        .pipe(uglify())
-        .pipe(gulp.dest('.'));
-});
 gulp.task('app:NuGet_lib', function () {
     return gulp.src(paths.source_nuget_lib)
         .pipe(gulp.dest(paths.nuget_lib));
@@ -205,80 +138,61 @@ gulp.task('app:NuGet_tools', function () {
         .pipe(replace(/{ExtensionFolder}/g, spSync_AppFolder))
         .pipe(gulp.dest(paths.nuget_tools));
 });
-gulp.task('app', ['app:Assets', 'app:Dwp', 'app:Html', 'app:Js', 'app:Css', 'app:NuGet_lib', 'app:NuGet_tools']);
+gulp.task('app', ['app:Assets', 'app:Dwp', 'app:Html', 'app:NuGet_lib', 'app:NuGet_tools']);
 
-
+gulp.task('upload:EnableWebPackDevServer', function () {
+    WebPackDevServerActive = true;
+});
 gulp.task('upload:Assets', function () {
     return gulp.src(paths.release_assets + '*')
         .pipe(spSync_Connection.differentSize(spSync_AppFolder + '/assets'))
-        .pipe(gulpif(!ErrorInHTML, spSync_Connection.dest(spSync_AppFolder + '/assets')))
-        .pipe(livereload());
+        .pipe(gulpif(!ErrorInHTML, spSync_Connection.dest(spSync_AppFolder + '/assets')));
 });
 gulp.task('upload:Dwp', function () {
     return gulp.src(paths.release_dwp + '*.dwp')
         .pipe(replace(/{SiteCollectionUrl}/g, spSync_devSettings.site.replace(/[//]$/, '')))
         .pipe(spSync_Connection.differentSize(spSync_WebPartFolder))
-        .pipe(gulpif(!ErrorInHTML, spSync_Connection.dest(spSync_WebPartFolder)))
-        .pipe(livereload());
+        .pipe(gulpif(!ErrorInHTML, spSync_Connection.dest(spSync_WebPartFolder)));
 });
 gulp.task('upload:Html', function () {
     return gulp.src(paths.release_html + '*.html')
-        .pipe(replace(/{SiteCollectionUrl}/g, spSync_devSettings.site.replace(/[//]$/, '')))
-        .pipe(gulpif(EnableLivereload, replace(/rev=/g, new Date().getTime())))
-        .pipe(gulpif(EnableLivereload, replace(/$/, '<img src="/_layouts/images/blank.gif" style="display: none;" onLoad=\'(function(e,a) {e.parentElement.removeChild(e);var s=document.createElement("script");s.setAttribute("src", a);document.head.appendChild(s);})(arguments[0].srcElement, "https://localhost:' + LivereloadPort + '/livereload.js?snipver=1");\'>')))
-        //.pipe(spSync_Connection.differentSize(spSync_AppFolder))
-        .pipe(gulpif(!ErrorInHTML, spSync_Connection.dest(spSync_AppFolder)))
-        .pipe(livereload());
+        .pipe(gulpif(WebPackDevServerActive, replace(/{SiteCollectionUrl}/g, "https://localhost:" + WebPackDevServerPort)))
+        .pipe(gulpif(!WebPackDevServerActive, replace(/{SiteCollectionUrl}/g, spSync_devSettings.site.replace(/[//]$/, ''))))
+
+        .pipe(gulpif(WebPackDevServerActive, replace(/$/, '<script src="https://localhost:' + WebPackDevServerPort + '/webpack-dev-server.js"></script>')))
+        .pipe(gulpif(!ErrorInHTML, spSync_Connection.dest(spSync_AppFolder)));
 });
-gulp.task('upload:Js', function () {
-    return gulp.src([paths.release_js, paths.release_jsmap])
-        //.pipe(spSync_Connection.differentSize(spSync_AppFolder))
-        .pipe(gulpif(!ErrorInJS, spSync_Connection.dest(spSync_AppFolder)))
-        .pipe(livereload());
-});
-gulp.task('upload:Css', function () {
-    return gulp.src(paths.release_css)
-        //.pipe(spSync_Connection.differentSize(spSync_AppFolder))
-        .pipe(spSync_Connection.dest(spSync_AppFolder))
-        .pipe(livereload());
-});
-gulp.task('upload:BowerJs', function () {
-    return gulp.src([paths.release_bower_js, paths.release_bower_jsmap])
-        .pipe(spSync_Connection.differentSize(spSync_AppFolder))
-        .pipe(spSync_Connection.dest(spSync_AppFolder))
-        .pipe(livereload());
-});
-gulp.task('upload:BowerCss', function () {
-    return gulp.src([paths.release_bower_css])
-        .pipe(spSync_Connection.differentSize(spSync_AppFolder))
-        .pipe(spSync_Connection.dest(spSync_AppFolder))
-        .pipe(livereload());
-});
+
 gulp.task('upload', function (callback) {
-    runSequence('build',
-        'authenticate',
-        ['upload:Assets', 'upload:Dwp', 'upload:Html', 'upload:Js', 'upload:Css', 'upload:BowerJs', 'upload:BowerCss'],
-        callback);
-});
-gulp.task('uploadOnly', function (callback) {
     runSequence(
         'authenticate',
-        ['upload:Assets', 'upload:Dwp', 'upload:Html', 'upload:Js', 'upload:Css', 'upload:BowerJs', 'upload:BowerCss'],
+        ['upload:Assets', 'upload:Dwp', 'upload:Html'],
         callback);
 });
 
-
-gulp.task('livereload', function () {
-    EnableLivereload = true;
-    livereload.listen({
-        pfx: fs.readFileSync('../dev.pfx'),
-        passphrase: 'test'
-    });
-    LivereloadPort = livereload.server.port;
+// Production build
+gulp.task('build', function (callback) {
+    runSequence('clean',
+        ['webpack:build', 'app'],
+        callback);
 });
 
+// Development build
+gulp.task('build-dev', function (callback) {
+    runSequence('clean',
+        ['webpack:build-dev', 'app'],
+        callback);
+});
 
-gulp.task('watch', ['livereload', 'upload'], function () {
+gulp.task('buildAndUpload', function (callback) {
+    runSequence(
+        ['app'],
+        'authenticate',
+        ['upload:Assets', 'upload:Dwp', 'upload:Html'],
+        callback);
+});
+
+gulp.task('watch', ['upload:EnableWebPackDevServer', 'buildAndUpload'], function () {
     gulp.watch(paths.source_dwp, function () {
         runSequence('app:Assets',
             'upload:Assets');
@@ -291,22 +205,87 @@ gulp.task('watch', ['livereload', 'upload'], function () {
         runSequence('app:Html',
             'upload:Html');
     });
-    gulp.watch([paths.source_js, paths.source_ts], function () {
-        runSequence('app:Js',
-            'upload:Js');
-    });
-    gulp.watch(paths.source_css, function () {
-        runSequence('app:Css',
-            'upload:Css');
-    });
+    runSequence('webpack-dev-server');
 });
 
 
-gulp.task('build', function (callback) {
-    runSequence('clean',
-        ['bower', 'app'],
-        callback);
+gulp.task("webpack:build", function (callback) {
+    // modify some webpack config options
+    var myConfig = Object.create(webpackConfig);
+    myConfig.plugins = myConfig.plugins.concat(
+        new webpack.DefinePlugin({
+            "process.env": {
+                // This has effect on the react lib size
+                "NODE_ENV": JSON.stringify("production")
+            }
+        }),
+        new webpack.optimize.OccurenceOrderPlugin(),
+        new webpack.optimize.DedupePlugin(),
+        new webpack.optimize.UglifyJsPlugin({ compress: { warnings: false } })
+    );
+
+    // run webpack
+    webpack(myConfig, function (err, stats) {
+        if (err) throw new gutil.PluginError("webpack:build", err);
+        gutil.log("[webpack:build]", stats.toString({
+            colors: true
+        }));
+        callback();
+    });
 });
 
+// modify some webpack config options
+var myDevConfig = Object.create(webpackConfig);
+myDevConfig.devtool = "sourcemap"; //'inline-source-map'
+myDevConfig.debug = true;
 
-gulp.task('default', ['build']);
+// create a single instance of the compiler to allow caching
+var devCompiler = webpack(myDevConfig);
+
+gulp.task("webpack:build-dev", function (callback) {
+    // run webpack
+    devCompiler.run(function (err, stats) {
+        if (err) throw new gutil.PluginError("webpack:build-dev", err);
+        gutil.log("[webpack:build-dev]", stats.toString({
+            colors: true
+        }));
+        callback();
+    });
+});
+
+gulp.task("webpack-dev-server", function (callback) {
+    // modify some webpack config options
+    var myConfig = Object.create(webpackConfig);
+    myConfig.devtool = "eval";
+    myConfig.debug = true;
+    //Inline mode and Hot Module Replacement of webpack dev server
+    myConfig.entry.main.unshift('webpack/hot/only-dev-server');
+    myConfig.entry.vendor.unshift('webpack/hot/only-dev-server');
+    myConfig.plugins = myConfig.plugins.concat(
+        new webpack.HotModuleReplacementPlugin()
+    );
+    myConfig.output.publicPath = "https://localhost:" + WebPackDevServerPort + spSync_AppFolder;
+    //add react hot loader
+    myConfig.module.loaders.unshift({ test: /\.tsx?$/, include: /src/, loader: 'react-hot-loader' });
+
+    // Start a webpack-dev-server
+    new WebpackDevServer(webpack(myConfig), {
+        https: {
+            key: fs.readFileSync(path.join(__dirname, "../dev.server.key")),
+            cert: fs.readFileSync(path.join(__dirname, "../dev.server.crt")),
+            ca: fs.readFileSync(path.join(__dirname, "../dev.ca.crt"))
+        },
+        hot: true,
+        publicPath: myConfig.output.publicPath,
+        stats: {
+            colors: true
+        },
+        compress: true
+    }).listen(WebPackDevServerPort, "localhost", function (err) {
+        if (err) throw new gutil.PluginError("webpack-dev-server", err);
+        gutil.log("[webpack-dev-server]", "https://localhost:" + WebPackDevServerPort + "/webpack-dev-server/index.html");
+    });
+});
+
+// The development server (the recommended option for development)
+gulp.task("default", ["watch"]);

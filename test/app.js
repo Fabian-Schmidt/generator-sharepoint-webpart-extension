@@ -18,21 +18,21 @@ describe('generator-sharepoint-webpart-extension:app', function () {
   it('creates files', function () {
     assert.file([
       '.gitignore',
-      'bower.json',
-	  'gulpfile.js',
+      'gulpfile.js',
       'package.json',
       'package.nuspec',
-	  'tsconfig.json',
-	  'typings.json',
-	  'NuGet_lib/Readme.txt',
-	  'NuGet_tools/install.ps1',
-	  'src/index.html',
-	  'src/foo.dwp',
-	  'src/assets/LogoLarge.png',
-	  'src/assets/LogoSmall.png',
-	  'src/js/AppPartPropertyUIOverride.ts',
-	  'src/js/extension.d.ts',
-	  'src/js/extension.ts'
+      'tsconfig.json',
+      'typings.json',
+      'webpack.config.js',
+      'NuGet_lib/Readme.txt',
+      'NuGet_tools/install.ps1',
+      'src/index.html',
+      'src/foo.dwp',
+      'src/assets/LogoLarge.png',
+      'src/assets/LogoSmall.png',
+      'src/js/AppPartPropertyUIOverride.ts',
+      'src/js/index.tsx',
+      'src/js/components/Counter.tsx'
     ]);
   });
 });

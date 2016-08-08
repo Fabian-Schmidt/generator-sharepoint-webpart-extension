@@ -11,7 +11,7 @@
     <tags><%= keywords.join(" "); %></tags>
   </metadata>
   <files>
-    <file src="release\" target="content" />
+    <file src="release\" target="release" />
     <file src="lib\" target="lib" />
     <file src="tools\" target="tools" />
   </files>

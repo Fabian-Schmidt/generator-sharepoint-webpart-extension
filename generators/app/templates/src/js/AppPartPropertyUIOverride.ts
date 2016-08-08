@@ -1,10 +1,10 @@
-/// <reference path="extension.d.ts" />
 "use strict";
+import * as $ from "jquery";
 /**
  * Based on AppPartPropertyUIOverride from OfficeDev PnP.
  * https://github.com/OfficeDev/PnP/blob/master/Samples/Core.AppPartPropertyUIOverride/Core.AppPartPropertyUIOverrideWeb/Scripts/Contoso.AppPartPropertyUIOverride.js
  */
-module AppPartPropertyUIOverride {
+export module AppPartPropertyUIOverride {
     export interface contentSettings {
         category: string;
         optionalName?: string;

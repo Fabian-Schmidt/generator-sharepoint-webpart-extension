@@ -1,6 +1,11 @@
-/// <reference path="extension.d.ts" />
+import * as React from "react";
+import * as ReactDOM from "react-dom";
+import * as $ from "jquery";
 
-module COMPANY.<%= classname %> {
+import { Counter } from "./components/Counter";
+import * as AppPartPropertyUIOverride from "./AppPartPropertyUIOverride";
+
+export module COMPANY.<%= classname %> {
 
     export interface ISetting {
         /**
@@ -14,31 +19,31 @@ module COMPANY.<%= classname %> {
     }
 
     export class <%= classname %> {
-        propertyUIOverride: AppPartPropertyUIOverride.AppPartPropertyUIOverride = null;
+        propertyUIOverride: AppPartPropertyUIOverride.AppPartPropertyUIOverride.AppPartPropertyUIOverride = null;
         output: HTMLDivElement;
         webPartId: string;
         settings: ISetting;
 
         constructor(webPartDOMObject: HTMLDivElement) {
-            this.output = <HTMLDivElement>$('<div></div>')[0];
-            $(webPartDOMObject).after(this.output);
-            if (webPartDOMObject.parentElement.attributes[<any>'webpartid2'])
-                this.webPartId = webPartDOMObject.parentElement.attributes[<any>'webpartid2'].value;
+            this.output = webPartDOMObject;
+            if (webPartDOMObject.parentElement.attributes['webpartid2' as any])
+                this.webPartId = webPartDOMObject.parentElement.attributes['webpartid2' as any].value;
             else
-                this.webPartId = webPartDOMObject.parentElement.attributes[<any>'webpartid'].value;
+                this.webPartId = webPartDOMObject.parentElement.attributes['webpartid' as any].value;
             try {
-                this.settings = JSON.parse(window.atob(webPartDOMObject.parentElement.attributes[<any>'helplink'].value));
+                this.settings = JSON.parse(window.atob(webPartDOMObject.parentElement.attributes['helplink'as any].value));
             } catch (err) {
                 //init default settings
-                this.settings = { v: false };
+                this.settings = { v: false, l: 'Typescript' };
             }
-            this.propertyUIOverride = new AppPartPropertyUIOverride.AppPartPropertyUIOverride(this.webPartId);
+            this.propertyUIOverride = new AppPartPropertyUIOverride.AppPartPropertyUIOverride.AppPartPropertyUIOverride(this.webPartId);
             this.propertyUIOverride.IsActive().done(this.PropertyUIOverrideActive.bind(this));
 
             this.Init();
         }
+
         PropertyUIOverrideActive(isActive: boolean) {
-			var that = this;
+            var that = this;
             if (isActive) {
                 var contentSettings = { category: 'Advanced', optionalName: 'Demo Settings', optionalToolTip: 'Tooltip', outputSeparator: true };
                 this.propertyUIOverride.hideProperty('HelpUrl', 'Advanced');
@@ -47,26 +52,28 @@ module COMPANY.<%= classname %> {
                 select.change((e) => {
                     //console.log('change');
                     //var value = (<HTMLSelectElement><any>this).value;
-                    var settings: ISetting = { l: (<HTMLSelectElement>e.currentTarget).value, v: true };
+                    var settings: ISetting = { l: (e.currentTarget as HTMLSelectElement).value, v: true };
                     that.propertyUIOverride.setValue('HelpUrl', window.btoa(JSON.stringify(settings)), 'Advanced');
-					that.settings = settings;
-					that.Init.apply(that);
+                    that.settings = settings;
+                    that.Init.apply(that);
                 });
                 var html: string[] = [];
-                html.push("<option>Foo</option>");
-                html.push("<option>Foo Bar</option>");
-                html.push("<option>Bar</option>");
+                html.push("<option>Typescript</option>");
+                html.push("<option>React</option>");
+                html.push("<option>WebPack</option>");
                 html.push("<option>Office365</option>");
                 select[0].innerHTML = html.join("");
 
                 select.val(this.settings.l);
             }
         }
-		
+
         Init() {
             var that = this;
-			
-			that.output.innerText = 'Web Part Loaded! Settings: ' + this.settings.l;
+			 ReactDOM.render(
+                <Counter demoSettings={that.settings.l} />,
+                that.output
+            );
         }
     }
 }
