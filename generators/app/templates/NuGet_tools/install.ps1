@@ -17,8 +17,11 @@ if((-not [string]::IsNullOrEmpty($username)) -and (-not [string]::IsNullOrEmpty(
 }
  
 $scriptLocation = Get-Location;
-Install-Module SharePointPnPPowerShellOnline -Scope CurrentUser;
-#Import-Module 'OfficeDevPnP.PowerShell.V16.Commands' -DisableNameChecking;
+if ((Get-Module SharePointPnPPowerShellOnline | Measure).Count -eq 0) {
+    #Set-PSRepository -Name PSGallery -InstallationPolicy Trusted;
+    Install-Module SharePointPnPPowerShellOnline -Scope CurrentUser;
+    #Import-Module 'OfficeDevPnP.PowerShell.V16.Commands' -DisableNameChecking;
+}
 
 # connect/authenticate to SharePoint Online and get ClientContext object.. 
 if ($securePassword) {
